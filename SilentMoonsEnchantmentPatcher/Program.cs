@@ -45,6 +45,7 @@ namespace SilentMoonsEnchantmentPatcher
 
         //TODO: settings
         private const int DragonboneLevel = 50;
+        private static readonly int[] CrossbowLevelData = {1, 1, 12, 24, 42, DragonboneLevel};
         
         private static readonly ModKey SkyrimModKey = ModKey.FromNameAndExtension("Skyrim.esm");
         private static readonly ModKey DawnguardModKey = ModKey.FromNameAndExtension("Dawnguard.esm");
@@ -234,7 +235,7 @@ namespace SilentMoonsEnchantmentPatcher
             return result;
         }
         
-        private static string? GetWeaponTypeByKeywords(IEnumerable<IFormLink<IKeywordGetter>>? keywords)
+        private static string? GetWeaponType(IEnumerable<IFormLink<IKeywordGetter>>? keywords)
         {
             if (keywords == null) return null;
             try
@@ -268,9 +269,20 @@ namespace SilentMoonsEnchantmentPatcher
             return null;
         }
 
+        private static string? GetWeaponType(IWeaponGetter weaponGetter)
+        {
+            var type = GetWeaponType(weaponGetter.Keywords);
+            if (type != "Bow") return type;
+            if (weaponGetter.Data == null) return type;
+            if (weaponGetter.Data.AnimationType == WeaponAnimationType.Crossbow)
+                type = "Crossbow";
+
+            return type;
+        }
+
         private static int GetDamageTier(IWeaponGetter weaponGetter, IReadOnlyDictionary<string, WeaponTierData> weaponTiers)
         {
-            var type = GetWeaponTypeByKeywords(weaponGetter.Keywords);
+            var type = GetWeaponType(weaponGetter);
             if (type == null) return 0;
             var damageTiers = weaponTiers[type];
             var damage = weaponGetter.BasicStats?.Damage ?? 0;
@@ -326,51 +338,39 @@ namespace SilentMoonsEnchantmentPatcher
                 }
             });
         }
-
-        private static short GetWeaponLevel(IWeapon weapon, EnchantmentData enchantmentData, IReadOnlyDictionary<string, List<WeaponDamageLevel>> damageLevelData, IReadOnlyDictionary<string, WeaponTierData> weaponTiers)
-        {
-            var weaponType = GetWeaponTypeByKeywords(weapon.Keywords);
-            if (weapon.BasicStats == null)
-                return 0;
-            if (weaponType == null)
-                return 0;
-            if (enchantmentData.Tier.LevelMod == null)
-                return 0;
-            
-            List<WeaponDamageLevel> damageLevel = damageLevelData[weaponType];
-            var damage = weapon.BasicStats.Damage;
-            var baseLevel = damageLevel
-                .Where(x => x.Damage >= damage)
-                .OrderBy(x => x.Damage)
-                .First()
-                .Level;
-            var damageTier = GetDamageTier(weapon, weaponTiers);
-            var enchantmentLevel = enchantmentData.Tier.LevelMod[$"{damageTier}"];
-            return (short) (baseLevel + enchantmentLevel);
-        }
         
         private static short GetWeaponLevel(IWeaponGetter weapon, EnchantmentData enchantmentData, IReadOnlyDictionary<string, List<WeaponDamageLevel>> damageLevelData, IReadOnlyDictionary<string, WeaponTierData> weaponTiers)
         {
-            var weaponType = GetWeaponTypeByKeywords(weapon.Keywords);
+            var weaponType = GetWeaponType(weapon);
             if (weapon.BasicStats == null)
                 return 0;
             if (weaponType == null)
                 return 0;
             if (enchantmentData.Tier.LevelMod == null)
                 return 0;
-            
-            List<WeaponDamageLevel> damageLevel = damageLevelData[weaponType];
-            var damage = weapon.BasicStats.Damage;
-            var baseLevel = damageLevel
-                .Where(x => x.Damage >= damage)
-                .OrderBy(x => x.Damage)
-                .First()
-                .Level;
-            var damageTier = GetDamageTier(weapon, weaponTiers);
-            if (!enchantmentData.Tier.LevelMod.ContainsKey($"{damageTier}"))
-                throw new NotImplementedException();
-            var enchantmentLevel = enchantmentData.Tier.LevelMod[$"{damageTier}"];
-            return (short) (baseLevel + enchantmentLevel);
+
+            if (weaponType == "Crossbow")
+            {
+                var damageTier = GetDamageTier(weapon, weaponTiers);
+                var baseLevel = CrossbowLevelData[damageTier];
+                var enchantmentLevel = enchantmentData.Tier.LevelMod[$"{damageTier}"];
+                return (short) (baseLevel + enchantmentLevel);
+            }
+            else
+            {
+                List<WeaponDamageLevel> damageLevel = damageLevelData[weaponType];
+                var damage = weapon.BasicStats.Damage;
+                List<WeaponDamageLevel> damageList = damageLevel
+                    .Where(x => x.Damage >= damage)
+                    .OrderBy(x => x.Damage)
+                    .ToList();
+                var baseLevel = damageList.Any() ? damageList.First().Level : DragonboneLevel;
+                var damageTier = GetDamageTier(weapon, weaponTiers);
+                if (!enchantmentData.Tier.LevelMod.ContainsKey($"{damageTier}"))
+                    throw new NotImplementedException();
+                var enchantmentLevel = enchantmentData.Tier.LevelMod[$"{damageTier}"];
+                return (short) (baseLevel + enchantmentLevel);
+            }
         }
         
         private static short MinLevel(ILeveledItem leveledItem)
@@ -431,9 +431,10 @@ namespace SilentMoonsEnchantmentPatcher
             }
             
             //filtering
+            Console.WriteLine("Filtering records");
             List<IWeaponGetter> weaponRecordsToPatch = state.LoadOrder.PriorityOrder
                 .WinningOverrides<IConstructibleObjectGetter>()
-                //.AsParallel()
+                .AsParallel()
                 //.WithExecutionMode(ParallelExecutionMode.ForceParallelism)
                 //.WithMergeOptions(ParallelMergeOptions.FullyBuffered)
                 .Select(constructibleObject =>
@@ -458,9 +459,12 @@ namespace SilentMoonsEnchantmentPatcher
                 .ToList();
             
             //patching
+            Console.WriteLine($"Patching {weaponRecordsToPatch.Count} records");
             foreach (var weaponRecord in weaponRecordsToPatch)
             {
                 Console.WriteLine($"Patching weapon {weaponRecord.EditorID} ({weaponRecord.FormKey})");
+                if (weaponRecord.EditorID == "LSC_WeaponCrossbow_Stalhrim")
+                    Debugger.Break();
 
                 noEnchantmentFormList.Items.Add(weaponRecord);
 
@@ -519,6 +523,7 @@ namespace SilentMoonsEnchantmentPatcher
             }
 
             //finalizing
+            Console.WriteLine("Finished patching, finalizing");
             Dictionary<string, LeveledItem> baseLItems = sailorMoonMod!.Mod!.LeveledItems
                 .Select(x =>
                 {
@@ -553,6 +558,8 @@ namespace SilentMoonsEnchantmentPatcher
                     AddWeaponToLeveledList(pair.Value, x, MinLevel(x));
                 });
             }
+            
+            Console.WriteLine("Finished with everything.");
         }
     }
 }
