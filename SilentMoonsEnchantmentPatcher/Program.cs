@@ -433,7 +433,7 @@ namespace SilentMoonsEnchantmentPatcher
             //filtering
             List<IWeaponGetter> weaponRecordsToPatch = state.LoadOrder.PriorityOrder
                 .WinningOverrides<IConstructibleObjectGetter>()
-                .AsParallel()
+                //.AsParallel()
                 //.WithExecutionMode(ParallelExecutionMode.ForceParallelism)
                 //.WithMergeOptions(ParallelMergeOptions.FullyBuffered)
                 .Select(constructibleObject =>
