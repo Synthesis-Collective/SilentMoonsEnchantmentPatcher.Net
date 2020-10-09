@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Mutagen.Bethesda;
 using Mutagen.Bethesda.Skyrim;
@@ -160,21 +161,23 @@ namespace SilentMoonsEnchantmentPatcher
 
         private static List<WeaponDamageLevel> GetWeaponDamageLevel(FormKey formKey, ILinkCache linkCache)
         {
-            if (!linkCache.TryLookup<LeveledItem>(formKey, out var leveledItem)) return new List<WeaponDamageLevel>();
+            if (!linkCache.TryLookup<ILeveledItemGetter>(formKey, out var leveledItem)) 
+                return new List<WeaponDamageLevel>();
             if (leveledItem.Entries == null) 
                 return new List<WeaponDamageLevel>();
-            List<LeveledItemEntry> entries = leveledItem.Entries
+            List<ILeveledItemEntryGetter> entries = leveledItem.Entries
                 .Where(x => x.Data != null)
                 .DistinctBy(x => x.Data!.Reference)
                 .ToList();
             var minLevel = entries.Min(x => x.Data!.Level);
             List<WeaponDamageLevel> result = entries.Select(x =>
             {
-                if (!x.Data!.Reference.TryResolve(linkCache, out IWeaponGetter? weaponGetter)) return default;
-                if (weaponGetter?.BasicStats == null) return default;
+                if (!x.Data!.Reference.TryResolve(linkCache, out var recordGetter)) return default;
+                if (!(recordGetter is IWeaponGetter weaponGetter)) return default;
+                //if (!weaponReference.TryResolve<IWeaponGetter>(linkCache, out var weaponGetter)) return default;
+                if (weaponGetter.BasicStats == null) return default;
                 var damage = weaponGetter.BasicStats.Damage;
                 return new WeaponDamageLevel(minLevel, damage);
-
             }).Where(x => x.Level > 0).ToList();
             return result;
         }
@@ -193,13 +196,12 @@ namespace SilentMoonsEnchantmentPatcher
                 {"Bow", GetWeaponDamageLevel(Skyrim.LeveledItem.LItemWeaponBow, linkCache)}
             };
 
-            foreach (var (key, value) in result)
+            result.ForEach(x =>
             {
+                var (key, value) = x;
                 value.Add(new WeaponDamageLevel(DragonboneLevel, weaponTiers[key].Dragon));
-                result.Remove(key);
-                result.Add(key, value);
-            }
-            
+            });
+
             return result;
         }
         
@@ -268,9 +270,7 @@ namespace SilentMoonsEnchantmentPatcher
         {
             var newEDID = enchantmentData.NewEDID(weaponGetter);
             Console.WriteLine($"Creating new enchanted weapon {newEDID}");
-
-            //var newWeapon = weaponGetter.DeepCopy();
-            //state.PatchMod.Weapons.Add(newWeapon);
+            
             var newWeapon = state.PatchMod.Weapons.AddNew();
             newWeapon.DeepCopyIn(weaponGetter);
             
@@ -338,6 +338,8 @@ namespace SilentMoonsEnchantmentPatcher
                 .First()
                 .Level;
             var damageTier = GetDamageTier(weapon, weaponTiers);
+            if (!enchantmentData.Tier.LevelMod.ContainsKey($"{damageTier}"))
+                throw new NotImplementedException();
             var enchantmentLevel = enchantmentData.Tier.LevelMod[$"{damageTier}"];
             return (short) (baseLevel + enchantmentLevel);
         }
@@ -391,10 +393,11 @@ namespace SilentMoonsEnchantmentPatcher
             }
             
             state.LoadOrder.PriorityOrder.WinningOverrides<IConstructibleObjectGetter>()
-                .AsParallel()
-                .WithExecutionMode(ParallelExecutionMode.ForceParallelism)
-                .WithMergeOptions(ParallelMergeOptions.Default)
-                .ForAll(constructibleObject =>
+                //.AsParallel()
+                //.WithExecutionMode(ParallelExecutionMode.ForceParallelism)
+                //.WithMergeOptions(ParallelMergeOptions.Default)
+                //.ForAll(constructibleObject =>
+                .ForEach(constructibleObject =>
                 {
                     //filter recipes that create un-enchanted weapons at forges
                     if (!constructibleObject.CreatedObject.TryResolve(state.LinkCache, out var createdObject)) return;
@@ -416,7 +419,7 @@ namespace SilentMoonsEnchantmentPatcher
                         var (type, data) = pair;
                         var enchantmentTier = GetEnchantmentTiersToMake(type, weaponRecord, weaponTiers);
                         List<EnchantmentData>? enchantmentData = enchantments[type];
-                        var enchantment = enchantmentData[enchantmentTier.BaseTier];
+                        var enchantment = enchantmentData.First(x => x.Tier.ID == enchantmentTier.BaseTier);
                         var enchantedFormList = GetFormList(type);
                     
                         var baseWeapon = MakeEnchantedWeapon(weaponRecord, enchantment, state);
@@ -440,7 +443,7 @@ namespace SilentMoonsEnchantmentPatcher
 
                             foreach (var tier in enchantmentTier.Tiers)
                             {
-                                enchantment = enchantmentData[tier];
+                                enchantment = enchantmentData.First(x => x.Tier.ID == tier);
                                 var newWeapon = MakeEnchantedWeapon(weaponRecord, enchantment, state);
                                 var level = GetWeaponLevel(weaponRecord, enchantment, damageLevelData, weaponTiers);
                                 AddWeaponToLeveledList(lItemWorld, newWeapon, level);
@@ -456,7 +459,7 @@ namespace SilentMoonsEnchantmentPatcher
                             
                             foreach (var tier in enchantmentTier.Tiers)
                             {
-                                enchantment = enchantmentData[tier];
+                                enchantment = enchantmentData.First(x => x.Tier.ID == tier);
                                 var newWeapon = MakeEnchantedWeapon(weaponRecord, enchantment, state);
                                 var level = GetWeaponLevel(weaponRecord, enchantment, damageLevelData, weaponTiers);
                                 AddWeaponToLeveledList(lItemForge, newWeapon, level);
