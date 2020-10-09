@@ -431,11 +431,11 @@ namespace SilentMoonsEnchantmentPatcher
             }
             
             //filtering
-            ParallelQuery<IWeaponGetter> weaponRecordsToPatch = state.LoadOrder.PriorityOrder
+            List<IWeaponGetter> weaponRecordsToPatch = state.LoadOrder.PriorityOrder
                 .WinningOverrides<IConstructibleObjectGetter>()
                 .AsParallel()
                 //.WithExecutionMode(ParallelExecutionMode.ForceParallelism)
-                //.WithMergeOptions(ParallelMergeOptions.Default)
+                //.WithMergeOptions(ParallelMergeOptions.FullyBuffered)
                 .Select(constructibleObject =>
                 {
                     //filter recipes that create un-enchanted weapons at forges
@@ -454,7 +454,8 @@ namespace SilentMoonsEnchantmentPatcher
                     return weaponRecord;
                 })
                 .Where(x => x != null)
-                .Select(x => x!);
+                .Select(x => x!)
+                .ToList();
             
             //patching
             foreach (var weaponRecord in weaponRecordsToPatch)
