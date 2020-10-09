@@ -1,0 +1,204 @@
+﻿{
+  "LunarDamage": {
+    "BasePts": 300,
+    "LevelPts": 200,
+    "edidMod": "Lunar",
+    "tiers": [
+      {
+        "id": 1,
+        "prefix": "",
+        "suffix": "of Moonbeams",
+        "levelMod": {
+          "0": 3,
+          "1": 1,
+          "2": 0
+        }
+      },
+      {
+        "id": 2,
+        "prefix": "Lesser Lunar",
+        "suffix": "",
+        "levelMod": {
+          "1": 3,
+          "2": 1,
+          "3": 0
+        }
+      },
+      {
+        "id": 3,
+        "prefix": "Lunar",
+        "suffix": "",
+        "levelMod": {
+          "1": 6,
+          "2": 3,
+          "3": 1,
+          "4": 0
+        }
+      },
+      {
+        "id": 4,
+        "prefix": "",
+        "suffix": "of Secunda",
+        "levelMod": {
+          "2": 6,
+          "3": 3,
+          "4": 1,
+          "5": 0
+        }
+      },
+      {
+        "id": 5,
+        "prefix": "",
+        "suffix": "of Masser",
+        "levelMod": {
+          "3": 6,
+          "4": 3,
+          "5": 0
+        }
+      },
+      {
+        "id": 6,
+        "prefix": "",
+        "suffix": "of the Eclipse",
+        "levelMod": {
+          "4": 6,
+          "5": 3
+        }
+      }
+    ]
+  },
+  "LunarDamagePlus": {
+    "BasePts": 300,
+    "LevelPts": 200,
+    "edidMod": "LunarPlus",
+    "tiers": [
+      {
+        "id": 1,
+        "prefix": "Awakened",
+        "suffix": "of Moonbeams",
+        "levelMod": {
+          "0": 3,
+          "1": 1,
+          "2": 0
+        }
+      },
+      {
+        "id": 2,
+        "prefix": "Awakened Lesser Lunar",
+        "suffix": "",
+        "levelMod": {
+          "1": 3,
+          "2": 1,
+          "3": 0
+        }
+      },
+      {
+        "id": 3,
+        "prefix": "Awakened Lunar",
+        "suffix": "",
+        "levelMod": {
+          "1": 6,
+          "2": 3,
+          "3": 1,
+          "4": 0
+        }
+      },
+      {
+        "id": 4,
+        "prefix": "Awakened",
+        "suffix": "of Secunda",
+        "levelMod": {
+          "2": 6,
+          "3": 3,
+          "4": 1,
+          "5": 0
+        }
+      },
+      {
+        "id": 5,
+        "prefix": "Awakened",
+        "suffix": "of Masser",
+        "levelMod": {
+          "3": 6,
+          "4": 3,
+          "5": 0
+        }
+      },
+      {
+        "id": 6,
+        "prefix": "Awakened",
+        "suffix": "of the Eclipse",
+        "levelMod": {
+          "4": 6,
+          "5": 3
+        }
+      }
+    ]
+  },
+  "LunarAbsorbHealth": {
+    "BasePts": -100,
+    "LevelPts": 400,
+    "edidMod": "LunarAbsorb",
+    "tiers": [
+      {
+        "id": 1,
+        "prefix": "",
+        "suffix": "of Night's Hunger",
+        "levelMod": {
+          "0": 0,
+          "1": 0,
+          "2": 0
+        }
+      },
+      {
+        "id": 2,
+        "prefix": "Feeding",
+        "suffix": "of the Night",
+        "levelMod": {
+          "1": 0,
+          "2": 1
+        }
+      },
+      {
+        "id": 3,
+        "prefix": "Lunar",
+        "suffix": "of Absorbing",
+        "levelMod": {
+          "1": 0,
+          "2": 3,
+          "3": 1,
+          "4": 0
+        }
+      },
+      {
+        "id": 4,
+        "prefix": "Lunar",
+        "suffix": "of Consuming",
+        "levelMod": {
+          "2": 6,
+          "3": 3,
+          "4": 1
+        }
+      },
+      {
+        "id": 5,
+        "prefix": "Devouring",
+        "suffix": "of the Moons",
+        "levelMod": {
+          "3": 6,
+          "4": 3,
+          "5": 0
+        }
+      },
+      {
+        "id": 6,
+        "prefix": "Eclipsing",
+        "suffix": "of the Vampire",
+        "levelMod": {
+          "4": 7,
+          "5": 3
+        }
+      }
+    ]
+  }
+}
