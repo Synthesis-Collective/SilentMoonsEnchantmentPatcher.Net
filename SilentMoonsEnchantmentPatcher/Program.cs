@@ -17,6 +17,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Mutagen.Bethesda;
 using Mutagen.Bethesda.Skyrim;
@@ -429,82 +430,94 @@ namespace SilentMoonsEnchantmentPatcher
                 };
             }
             
-            //patching
-            
-            state.LoadOrder.PriorityOrder.WinningOverrides<IConstructibleObjectGetter>()
-                .ForEach(constructibleObject =>
+            //filtering
+            ParallelQuery<IWeaponGetter> weaponRecordsToPatch = state.LoadOrder.PriorityOrder
+                .WinningOverrides<IConstructibleObjectGetter>()
+                .AsParallel()
+                //.WithExecutionMode(ParallelExecutionMode.ForceParallelism)
+                //.WithMergeOptions(ParallelMergeOptions.Default)
+                .Select(constructibleObject =>
                 {
                     //filter recipes that create un-enchanted weapons at forges
-                    if (!constructibleObject.CreatedObject.TryResolve(state.LinkCache, out var createdObject)) return;
-                    if (!constructibleObject.WorkbenchKeyword.TryResolve(state.LinkCache, out var workbenchKeyword)) return;
+                    if (!constructibleObject.CreatedObject.TryResolve(state.LinkCache, out var createdObject))
+                        return null;
+                    if (!constructibleObject.WorkbenchKeyword.TryResolve(state.LinkCache, out var workbenchKeyword))
+                        return null;
 
-                    if (!workbenchKeyword.FormKey.Equals(Skyrim.Keyword.CraftingSmithingForge)) return;
-                
-                    if (!(createdObject is IWeaponGetter weaponRecord)) return;
-                    if (!weaponRecord.ObjectEffect.IsNull) return;
-                    if (weaponRecord.Keywords == null) return;
-                    if (!weaponRecord.Keywords.Any(x => WeaponKeywords.Contains(x.FormKey))) return;
-                
-                    Console.WriteLine($"Patching weapon {weaponRecord.EditorID} ({weaponRecord.FormKey})");
-                
-                    noEnchantmentFormList.Items.Add(weaponRecord);
+                    if (!workbenchKeyword.FormKey.Equals(Skyrim.Keyword.CraftingSmithingForge)) return null;
 
-                    foreach (KeyValuePair<string, List<EnchantmentData>> pair in enchantments)
+                    if (!(createdObject is IWeaponGetter weaponRecord)) return null;
+                    if (!weaponRecord.ObjectEffect.IsNull) return null;
+                    if (weaponRecord.Keywords == null) return null;
+                    if (!weaponRecord.Keywords.Any(x => WeaponKeywords.Contains(x.FormKey))) return null;
+
+                    return weaponRecord;
+                })
+                .Where(x => x != null)
+                .Select(x => x!);
+            
+            //patching
+            foreach (var weaponRecord in weaponRecordsToPatch)
+            {
+                Console.WriteLine($"Patching weapon {weaponRecord.EditorID} ({weaponRecord.FormKey})");
+
+                noEnchantmentFormList.Items.Add(weaponRecord);
+
+                foreach (KeyValuePair<string, List<EnchantmentData>> pair in enchantments)
+                {
+                    var (type, _) = pair;
+                    var enchantmentTier = GetEnchantmentTiersToMake(type, weaponRecord, weaponTiers);
+                    List<EnchantmentData>? enchantmentData = enchantments[type];
+                    var enchantment = enchantmentData.First(x => x.Tier.ID == enchantmentTier.BaseTier);
+                    var enchantedFormList = GetFormList(type);
+
+                    var baseWeapon = MakeEnchantedWeapon(weaponRecord, enchantment, state);
+                    if (enchantmentTier.Tiers.Count == 0)
                     {
-                        var (type, _) = pair;
-                        var enchantmentTier = GetEnchantmentTiersToMake(type, weaponRecord, weaponTiers);
-                        List<EnchantmentData>? enchantmentData = enchantments[type];
-                        var enchantment = enchantmentData.First(x => x.Tier.ID == enchantmentTier.BaseTier);
-                        var enchantedFormList = GetFormList(type);
-
-                        var baseWeapon = MakeEnchantedWeapon(weaponRecord, enchantment, state);
-                        if (enchantmentTier.Tiers.Count == 0)
+                        enchantedFormList.Items.Add(baseWeapon);
+                    } else if (type.Equals("LunarDamage", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var lvlWorldEDID = $"LItemEnch{weaponRecord.EditorID}{type}";
+                        var lItemWorld = state.PatchMod.LeveledItems.AddNew(lvlWorldEDID);
+                        var lvlForgeEDID = $"LItemEnch{weaponRecord.EditorID}{type}Forge";
+                        var lItemForge = state.PatchMod.LeveledItems.AddNew(lvlForgeEDID);
+                        
+                        enchantedFormList.Items.Add(new FormLink<ISkyrimMajorRecordGetter>(lItemForge.FormKey));
+                        AddWeaponToLeveledList(lItemForge, baseWeapon, 1);
+                        if (enchantmentTier.Tiers.Count < 3)
                         {
-                            enchantedFormList.Items.Add(baseWeapon);
-                        } else if (type.Equals("LunarDamage", StringComparison.OrdinalIgnoreCase))
-                        {
-                            var lvlWorldEDID = $"LItemEnch{weaponRecord.EditorID}{type}";
-                            var lItemWorld = state.PatchMod.LeveledItems.AddNew(lvlWorldEDID);
-                            var lvlForgeEDID = $"LItemEnch{weaponRecord.EditorID}{type}Forge";
-                            var lItemForge = state.PatchMod.LeveledItems.AddNew(lvlForgeEDID);
-                            
-                            enchantedFormList.Items.Add(new FormLink<ISkyrimMajorRecordGetter>(lItemForge.FormKey));
-                            AddWeaponToLeveledList(lItemForge, baseWeapon, 1);
-                            if (enchantmentTier.Tiers.Count < 3)
-                            {
-                                var level = GetWeaponLevel(baseWeapon, enchantment, damageLevelData, weaponTiers);
-                                AddWeaponToLeveledList(lItemWorld, baseWeapon, level);
-                            }
-
-                            foreach (var tier in enchantmentTier.Tiers)
-                            {
-                                enchantment = enchantmentData.First(x => x.Tier.ID == tier);
-                                var newWeapon = MakeEnchantedWeapon(weaponRecord, enchantment, state);
-                                var level = GetWeaponLevel(weaponRecord, enchantment, damageLevelData, weaponTiers);
-                                AddWeaponToLeveledList(lItemWorld, newWeapon, level);
-                                AddWeaponToLeveledList(lItemForge, newWeapon, level);
-                            }
+                            var level = GetWeaponLevel(baseWeapon, enchantment, damageLevelData, weaponTiers);
+                            AddWeaponToLeveledList(lItemWorld, baseWeapon, level);
                         }
-                        else
+
+                        foreach (var tier in enchantmentTier.Tiers)
                         {
-                            var lvlForgeEDID = $"LItemEnch{weaponRecord.EditorID}{type}Forge";
-                            var lItemForge = state.PatchMod.LeveledItems.AddNew(lvlForgeEDID);
-                            enchantedFormList.Items.Add(lItemForge);
-                            AddWeaponToLeveledList(lItemForge, baseWeapon, 1);
-                            
-                            foreach (var tier in enchantmentTier.Tiers)
-                            {
-                                enchantment = enchantmentData.First(x => x.Tier.ID == tier);
-                                var newWeapon = MakeEnchantedWeapon(weaponRecord, enchantment, state);
-                                var level = GetWeaponLevel(weaponRecord, enchantment, damageLevelData, weaponTiers);
-                                AddWeaponToLeveledList(lItemForge, newWeapon, level);
-                            }
+                            enchantment = enchantmentData.First(x => x.Tier.ID == tier);
+                            var newWeapon = MakeEnchantedWeapon(weaponRecord, enchantment, state);
+                            var level = GetWeaponLevel(weaponRecord, enchantment, damageLevelData, weaponTiers);
+                            AddWeaponToLeveledList(lItemWorld, newWeapon, level);
+                            AddWeaponToLeveledList(lItemForge, newWeapon, level);
                         }
                     }
-                });
-            
-            //finalizing
+                    else
+                    {
+                        var lvlForgeEDID = $"LItemEnch{weaponRecord.EditorID}{type}Forge";
+                        var lItemForge = state.PatchMod.LeveledItems.AddNew(lvlForgeEDID);
+                        enchantedFormList.Items.Add(lItemForge);
+                        AddWeaponToLeveledList(lItemForge, baseWeapon, 1);
+                        
+                        foreach (var tier in enchantmentTier.Tiers)
+                        {
+                            enchantment = enchantmentData.First(x => x.Tier.ID == tier);
+                            var newWeapon = MakeEnchantedWeapon(weaponRecord, enchantment, state);
+                            var level = GetWeaponLevel(weaponRecord, enchantment, damageLevelData, weaponTiers);
+                            AddWeaponToLeveledList(lItemForge, newWeapon, level);
+                        }
+                    }
+                }
+            }
 
+            //finalizing
             Dictionary<string, LeveledItem> baseLItems = sailorMoonMod!.Mod!.LeveledItems
                 .Select(x =>
                 {
