@@ -1,6 +1,22 @@
-﻿using System;
+﻿// /*
+//     Copyright (C) 2020  erri120
+// 
+//     This program is free software: you can redistribute it and/or modify
+//     it under the terms of the GNU General Public License as published by
+//     the Free Software Foundation, either version 3 of the License, or
+//     (at your option) any later version.
+// 
+//     This program is distributed in the hope that it will be useful,
+//     but WITHOUT ANY WARRANTY; without even the implied warranty of
+//     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//     GNU General Public License for more details.
+// 
+//     You should have received a copy of the GNU General Public License
+//     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// */
+
+using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using Mutagen.Bethesda;
 using Mutagen.Bethesda.Skyrim;
@@ -65,6 +81,18 @@ namespace SilentMoonsEnchantmentPatcher
             "Orcish",
             "Elven",
             "Ebony"
+        };
+
+        private static readonly string[] WeaponTypes =
+        {
+            "Sword",
+            "WarAxe",
+            "Mace",
+            "Greatsword",
+            "Battleaxe",
+            "Warhammer",
+            "Dagger",
+            "Bow"
         };
         
         private static readonly IReadOnlyList<EnchantmentWeaponTier> EnchantmentWeaponTiers = new List<EnchantmentWeaponTier>
@@ -344,6 +372,15 @@ namespace SilentMoonsEnchantmentPatcher
             return (short) (baseLevel + enchantmentLevel);
         }
         
+        private static short MinLevel(ILeveledItem leveledItem)
+        {
+            if (leveledItem.Entries == null) return 0;
+            return leveledItem.Entries
+                .Where(x => x.Data != null)
+                .Select(x => x.Data!.Level)
+                .Min();
+        }
+        
         private static void RunPatch(SynthesisState<ISkyrimMod, ISkyrimModGetter> state)
         {
             var lunarEnchantmentData = JsonUtils.FromJson<Dictionary<string, LunarEnchantmentData>>("LunarEnchData.json");
@@ -392,11 +429,9 @@ namespace SilentMoonsEnchantmentPatcher
                 };
             }
             
+            //patching
+            
             state.LoadOrder.PriorityOrder.WinningOverrides<IConstructibleObjectGetter>()
-                //.AsParallel()
-                //.WithExecutionMode(ParallelExecutionMode.ForceParallelism)
-                //.WithMergeOptions(ParallelMergeOptions.Default)
-                //.ForAll(constructibleObject =>
                 .ForEach(constructibleObject =>
                 {
                     //filter recipes that create un-enchanted weapons at forges
@@ -416,12 +451,12 @@ namespace SilentMoonsEnchantmentPatcher
 
                     foreach (KeyValuePair<string, List<EnchantmentData>> pair in enchantments)
                     {
-                        var (type, data) = pair;
+                        var (type, _) = pair;
                         var enchantmentTier = GetEnchantmentTiersToMake(type, weaponRecord, weaponTiers);
                         List<EnchantmentData>? enchantmentData = enchantments[type];
                         var enchantment = enchantmentData.First(x => x.Tier.ID == enchantmentTier.BaseTier);
                         var enchantedFormList = GetFormList(type);
-                    
+
                         var baseWeapon = MakeEnchantedWeapon(weaponRecord, enchantment, state);
                         if (enchantmentTier.Tiers.Count == 0)
                         {
@@ -467,6 +502,43 @@ namespace SilentMoonsEnchantmentPatcher
                         }
                     }
                 });
+            
+            //finalizing
+
+            Dictionary<string, LeveledItem> baseLItems = sailorMoonMod!.Mod!.LeveledItems
+                .Select(x =>
+                {
+                    if (x.EditorID == null) return ("", x);
+                    if (!x.EditorID.StartsWith("LunarEnchWeapon")) return ("", x);
+                    var wType = x.EditorID.Substring("LunarEnchWeapon".Length);
+                    var match = WeaponTypes.Any(y => y.Equals(wType, StringComparison.OrdinalIgnoreCase));
+                    return !match ? ("", x) : (wType, x);
+                })
+                .Where(x => !x.Item1.Equals(string.Empty))
+                .Select(x =>
+                {
+                    var copy = state.PatchMod.LeveledItems.GetOrAddAsOverride(x.x);
+                    return (x.Item1, copy);
+                })
+                .ToDictionary(x => x.Item1, x => x.Item2, StringComparer.OrdinalIgnoreCase);
+            
+            List<LeveledItem> records = state.PatchMod.LeveledItems
+                .Where(x => x.EditorID != null && x.EditorID.EndsWith("LunarDamage", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            foreach (KeyValuePair<string, LeveledItem> pair in baseLItems)
+            {
+                List<LeveledItem> lItems = records
+                    .Where(x => 
+                        x.EditorID != null &&
+                        x.EditorID.EndsWith($"{pair.Key}LunarDamage", StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+
+                lItems.ForEach(x =>
+                {
+                    AddWeaponToLeveledList(pair.Value, x, MinLevel(x));
+                });
+            }
         }
     }
 }

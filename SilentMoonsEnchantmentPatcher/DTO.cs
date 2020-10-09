@@ -53,7 +53,7 @@ namespace SilentMoonsEnchantmentPatcher
 
     public class EnchantmentData
     {
-        public readonly LunarEnchantmentData LunarEnchantmentData;
+        private readonly LunarEnchantmentData _lunarEnchantmentData;
         public readonly Tier Tier;
         public readonly IObjectEffectGetter ObjectEffectGetter;
         
@@ -61,14 +61,14 @@ namespace SilentMoonsEnchantmentPatcher
         
         public EnchantmentData(LunarEnchantmentData lunarEnchantmentData, Tier tier, IObjectEffectGetter objectEffectGetter)
         {
-            LunarEnchantmentData = lunarEnchantmentData;
+            _lunarEnchantmentData = lunarEnchantmentData;
             Tier = tier;
             ObjectEffectGetter = objectEffectGetter;
         }
 
         public string NewEDID(IWeaponGetter record)
         {
-            return $"Ench{record.EditorID}{LunarEnchantmentData.EDIDMod}0{Tier.ID}";
+            return $"Ench{record.EditorID}{_lunarEnchantmentData.EDIDMod}0{Tier.ID}";
         }
 
         public string NewName(IWeaponGetter record)
@@ -77,7 +77,7 @@ namespace SilentMoonsEnchantmentPatcher
         }
     }
 
-    public struct WeaponTierData
+    public readonly struct WeaponTierData
     {
         public readonly ushort IronSteel;
         public readonly ushort OrcishDwarven;
