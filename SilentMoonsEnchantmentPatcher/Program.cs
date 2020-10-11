@@ -310,7 +310,7 @@ namespace SilentMoonsEnchantmentPatcher
         private static Weapon MakeEnchantedWeapon(IWeaponGetter weaponGetter, EnchantmentData enchantmentData, SynthesisState<ISkyrimMod, ISkyrimModGetter> state)
         {
             var newEDID = enchantmentData.NewEDID(weaponGetter);
-            Console.WriteLine($"Creating new enchanted weapon {newEDID}");
+            //Console.WriteLine($"Creating new enchanted weapon {newEDID}");
             
             var newWeapon = state.PatchMod.Weapons.AddNew();
             newWeapon.DeepCopyIn(weaponGetter);
@@ -462,10 +462,6 @@ namespace SilentMoonsEnchantmentPatcher
             Console.WriteLine($"Patching {weaponRecordsToPatch.Count} records");
             foreach (var weaponRecord in weaponRecordsToPatch)
             {
-                Console.WriteLine($"Patching weapon {weaponRecord.EditorID} ({weaponRecord.FormKey})");
-                if (weaponRecord.EditorID == "LSC_WeaponCrossbow_Stalhrim")
-                    Debugger.Break();
-
                 noEnchantmentFormList.Items.Add(weaponRecord);
 
                 foreach (KeyValuePair<string, List<EnchantmentData>> pair in enchantments)
