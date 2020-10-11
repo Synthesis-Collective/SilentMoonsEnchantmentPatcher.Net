@@ -17,7 +17,7 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using Mutagen.Bethesda;
 using Mutagen.Bethesda.Skyrim;
@@ -367,7 +367,7 @@ namespace SilentMoonsEnchantmentPatcher
                 var baseLevel = damageList.Any() ? damageList.First().Level : DragonboneLevel;
                 var damageTier = GetDamageTier(weapon, weaponTiers);
                 if (!enchantmentData.Tier.LevelMod.ContainsKey($"{damageTier}"))
-                    throw new NotImplementedException();
+                    throw new Exception($"Unable to find key {damageTier} in LevelMod dictionary, weapon is \"{weapon.FormKey} {weapon.EditorID}\" Tier ID: {enchantmentData.Tier.ID}");
                 var enchantmentLevel = enchantmentData.Tier.LevelMod[$"{damageTier}"];
                 return (short) (baseLevel + enchantmentLevel);
             }
@@ -395,10 +395,10 @@ namespace SilentMoonsEnchantmentPatcher
                 throw new ArgumentException("Unable to get SailorMoonClub.esp plugin");
 
             if (!state.LoadOrder.TryGetValue(SkyrimModKey, out IModListing<ISkyrimModGetter>? skyrimListing))
-                throw new NotImplementedException();
+                throw new ArgumentException("Skyrim.esm was not found!");
             
             if (!state.LoadOrder.TryGetValue(DawnguardModKey, out IModListing<ISkyrimModGetter>? dawnguardListing))
-                throw new NotImplementedException();
+                throw new ArgumentException("Dawnguard.esm was not found!");
             
             if (!state.LinkCache.TryLookup<IFormListGetter>(LunarForgeUnenchantedFormIDListFormKey, out var unenchantedFormIDListGetter))
                 throw new Exception($"Unable to find {LunarForgeUnenchantedFormIDListFormKey}");
