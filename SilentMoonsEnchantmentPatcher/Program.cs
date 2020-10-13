@@ -440,8 +440,11 @@ namespace SilentMoonsEnchantmentPatcher
                 .Select(constructibleObject =>
                 {
                     //filter recipes that create un-enchanted weapons at forges
-                    if (!constructibleObject.CreatedObject.TryResolve(state.LinkCache, out var createdObject))
+                    if (constructibleObject.CreatedObject.FormKey == null
+                        || !state.LinkCache.TryLookup<IWeaponGetter>(constructibleObject.CreatedObject.FormKey.Value, out var createdObject))
+                    {
                         return null;
+                    }
                     if (!constructibleObject.WorkbenchKeyword.TryResolve(state.LinkCache, out var workbenchKeyword))
                         return null;
 
