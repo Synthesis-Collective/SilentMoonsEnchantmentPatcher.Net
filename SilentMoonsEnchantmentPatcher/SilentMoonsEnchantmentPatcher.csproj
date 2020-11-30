@@ -12,7 +12,7 @@
       <PackageReference Include="Mutagen.Bethesda.Core" Version="0.21.2" />
       <PackageReference Include="Mutagen.Bethesda.FormKeys.SkyrimSE" Version="1.0.0" />
       <PackageReference Include="Mutagen.Bethesda.Skyrim" Version="0.21.2" />
-      <PackageReference Include="Mutagen.Bethesda.Synthesis" Version="0.10.18" />
+      <PackageReference Include="Mutagen.Bethesda.Synthesis" Version="0.11.3" />
     </ItemGroup>
     
     <ItemGroup>
