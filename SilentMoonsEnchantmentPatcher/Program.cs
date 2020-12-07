@@ -1,4 +1,4 @@
-﻿// /*
+// /*
 //     Copyright (C) 2020  erri120
 // 
 //     This program is free software: you can redistribute it and/or modify
@@ -191,7 +191,7 @@ namespace SilentMoonsEnchantmentPatcher
 
         private static List<WeaponDamageLevel> GetWeaponDamageLevel(FormKey formKey, ILinkCache linkCache)
         {
-            if (!linkCache.TryLookup<ILeveledItemGetter>(formKey, out var leveledItem)) 
+            if (!linkCache.TryResolve<ILeveledItemGetter>(formKey, out var leveledItem)) 
                 return new List<WeaponDamageLevel>();
             if (leveledItem.Entries == null) 
                 return new List<WeaponDamageLevel>();
@@ -400,13 +400,13 @@ namespace SilentMoonsEnchantmentPatcher
             if (!state.LoadOrder.TryGetValue(DawnguardModKey, out IModListing<ISkyrimModGetter>? dawnguardListing))
                 throw new ArgumentException("Dawnguard.esm was not found!");
             
-            if (!state.LinkCache.TryLookup<IFormListGetter>(LunarForgeUnenchantedFormIDListFormKey, out var unenchantedFormIDListGetter))
+            if (!state.LinkCache.TryResolve<IFormListGetter>(LunarForgeUnenchantedFormIDListFormKey, out var unenchantedFormIDListGetter))
                 throw new Exception($"Unable to find {LunarForgeUnenchantedFormIDListFormKey}");
-            if (!state.LinkCache.TryLookup<IFormListGetter>(LunarForgeAwakenedLunarFormIDListFormKey, out var awakenedFormIDListGetter))
+            if (!state.LinkCache.TryResolve<IFormListGetter>(LunarForgeAwakenedLunarFormIDListFormKey, out var awakenedFormIDListGetter))
                 throw new Exception($"Unable to find {LunarForgeAwakenedLunarFormIDListFormKey}");
-            if (!state.LinkCache.TryLookup<IFormListGetter>(LunarForgeLunarAbsorbFormIDListFormKey, out var lunarAbsorbFormIDListGetter))
+            if (!state.LinkCache.TryResolve<IFormListGetter>(LunarForgeLunarAbsorbFormIDListFormKey, out var lunarAbsorbFormIDListGetter))
                 throw new Exception($"Unable to find {LunarForgeLunarAbsorbFormIDListFormKey}");
-            if (!state.LinkCache.TryLookup<IFormListGetter>(LunarForgeLunarBasicFormIDListFormKey, out var lunarBasicFormIDListGetter))
+            if (!state.LinkCache.TryResolve<IFormListGetter>(LunarForgeLunarBasicFormIDListFormKey, out var lunarBasicFormIDListGetter))
                 throw new Exception($"Unable to find {LunarForgeLunarBasicFormIDListFormKey}");
 
             IReadOnlyDictionary<string, List<EnchantmentData>> enchantments = GetEnchantmentsData(sailorMoonMod.Mod!, lunarEnchantmentData);
@@ -441,7 +441,7 @@ namespace SilentMoonsEnchantmentPatcher
                 {
                     //filter recipes that create un-enchanted weapons at forges
                     if (constructibleObject.CreatedObject.FormKey == null
-                        || !state.LinkCache.TryLookup<IWeaponGetter>(constructibleObject.CreatedObject.FormKey.Value, out var createdObject))
+                        || !constructibleObject.CreatedObject.TryResolve<IWeaponGetter>(state.LinkCache, out var createdObject))
                     {
                         return null;
                     }
