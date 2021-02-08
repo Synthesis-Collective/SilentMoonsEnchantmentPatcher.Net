@@ -24,7 +24,6 @@ using Mutagen.Bethesda.Skyrim;
 using Mutagen.Bethesda.Synthesis;
 using Mutagen.Bethesda.FormKeys.SkyrimSE;
 using Noggog;
-using Wabbajack.Common;
 
 namespace SilentMoonsEnchantmentPatcher
 {
@@ -197,7 +196,7 @@ namespace SilentMoonsEnchantmentPatcher
                 return new List<WeaponDamageLevel>();
             List<ILeveledItemEntryGetter> entries = leveledItem.Entries
                 .Where(x => x.Data != null)
-                .DistinctBy(x => x.Data!.Reference)
+                .Distinct(x => x.Data!.Reference)
                 .ToList();
             var minLevel = entries.Min(x => x.Data!.Level);
             List<WeaponDamageLevel> result = entries.Select(x =>
