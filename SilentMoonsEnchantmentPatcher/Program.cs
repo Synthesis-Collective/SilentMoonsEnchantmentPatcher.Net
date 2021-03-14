@@ -24,22 +24,18 @@ using Mutagen.Bethesda.Skyrim;
 using Mutagen.Bethesda.Synthesis;
 using Mutagen.Bethesda.FormKeys.SkyrimSE;
 using Noggog;
+using System.Threading.Tasks;
 
 namespace SilentMoonsEnchantmentPatcher
 {
     public static class Program
     {
-        public static int Main(string[] args)
+        public static Task<int> Main(string[] args)
         {
-            return SynthesisPipeline.Instance.Patch<ISkyrimMod, ISkyrimModGetter>(
-                args, RunPatch, new UserPreferences
-                {
-                    ActionsForEmptyArgs = new RunDefaultPatcher
-                    {
-                        IdentifyingModKey = "LunarWeaponsPatch.esp",
-                        TargetRelease = GameRelease.SkyrimSE
-                    }
-                });
+            return SynthesisPipeline.Instance
+                .AddPatch<ISkyrimMod, ISkyrimModGetter>(RunPatch)
+                .SetTypicalOpen(GameRelease.SkyrimSE, "LunarWeaponsPatch.esp")
+                .Run(args);
         }
 
         //TODO: settings
@@ -58,7 +54,7 @@ namespace SilentMoonsEnchantmentPatcher
         //was hardcoded in the original
         private static readonly WeaponTierData CrossbowDamage = new WeaponTierData(19, 22, 23, 27, 30);
         
-        private static readonly FormKey[] WeaponKeywords = {
+        private static readonly HashSet<IFormLinkGetter<IKeywordGetter>> WeaponKeywords = new() {
             Skyrim.Keyword.WeapTypeSword,
             Skyrim.Keyword.WeapTypeWarAxe,
             Skyrim.Keyword.WeapTypeMace,
@@ -139,13 +135,13 @@ namespace SilentMoonsEnchantmentPatcher
                 .ToDictionary(x => x.enchantmentType, x => x.list!, StringComparer.OrdinalIgnoreCase);
         }
 
-        private static ushort GetDamage(string edid, IReadOnlyDictionary<string?, IWeaponGetter> weapons)
+        private static ushort GetDamage(string edid, IReadOnlyDictionary<string, IWeaponGetter> weapons)
         {
             if (!weapons.TryGetValue(edid, out var weaponGetter)) return 0;
             return weaponGetter.BasicStats?.Damage ?? 0;
         }
 
-        private static WeaponTierData GetWeaponTierData(string suffix, IReadOnlyDictionary<string?, IWeaponGetter> skyrimWeapons, IReadOnlyDictionary<string?, IWeaponGetter> dawnguardWeapons)
+        private static WeaponTierData GetWeaponTierData(string suffix, IReadOnlyDictionary<string, IWeaponGetter> skyrimWeapons, IReadOnlyDictionary<string, IWeaponGetter> dawnguardWeapons)
         {
             return new WeaponTierData(
                 GetDamage($"Iron{suffix}", skyrimWeapons),
@@ -157,12 +153,12 @@ namespace SilentMoonsEnchantmentPatcher
         
         private static IReadOnlyDictionary<string, WeaponTierData> GetWeaponTierDataDictionary(ISkyrimModGetter skyrim, ISkyrimModGetter dawnguard)
         {
-            IReadOnlyDictionary<string?, IWeaponGetter> skyrimWeapons = skyrim.Weapons
+            IReadOnlyDictionary<string, IWeaponGetter> skyrimWeapons = skyrim.Weapons
                 .Where(x => x.EditorID != null && WeaponPrefixes.Any(y => x.EditorID.StartsWith(y, StringComparison.OrdinalIgnoreCase)))
-                .ToDictionary(x => x.EditorID, x => x, StringComparer.OrdinalIgnoreCase);
-            IReadOnlyDictionary<string?, IWeaponGetter> dragonBoneWeapons = dawnguard.Weapons
+                .ToDictionary(x => x.EditorID!, x => x, StringComparer.OrdinalIgnoreCase);
+            IReadOnlyDictionary<string, IWeaponGetter> dragonBoneWeapons = dawnguard.Weapons
                 .Where(x => x.EditorID != null && x.EditorID.StartsWith("DLC1Dragonbone"))
-                .ToDictionary(x => x.EditorID, x => x, StringComparer.OrdinalIgnoreCase);
+                .ToDictionary(x => x.EditorID!, x => x, StringComparer.OrdinalIgnoreCase);
 
             Dictionary<string, WeaponTierData> tierData =
                 new Dictionary<string, WeaponTierData>(StringComparer.OrdinalIgnoreCase)
@@ -234,30 +230,29 @@ namespace SilentMoonsEnchantmentPatcher
             return result;
         }
         
-        private static string? GetWeaponType(IEnumerable<IFormLink<IKeywordGetter>>? keywords)
+        private static string? GetWeaponType(IEnumerable<IFormLinkGetter<IKeywordGetter>>? keywords)
         {
             if (keywords == null) return null;
             try
             {
-                IFormLink<IKeywordGetter>? formKey = keywords.FirstOrDefault(x => WeaponKeywords.Contains(x.FormKey));
-                if (formKey == null) return null;
+                var firstWeapKeyword = keywords.FirstOrDefault(x => WeaponKeywords.Contains(x));
+                if (firstWeapKeyword == null) return null;
 
-                var id = formKey.FormKey.ID;
-                if (id == Skyrim.Keyword.WeapTypeSword.ID)
+                if (firstWeapKeyword.Equals(Skyrim.Keyword.WeapTypeSword))
                     return "1HSword";
-                if (id == Skyrim.Keyword.WeapTypeWarAxe.ID)
+                if (firstWeapKeyword.Equals(Skyrim.Keyword.WeapTypeWarAxe))
                     return "1HAxe";
-                if (id == Skyrim.Keyword.WeapTypeMace.ID)
+                if (firstWeapKeyword.Equals(Skyrim.Keyword.WeapTypeMace))
                     return "1HHammer";
-                if (id == Skyrim.Keyword.WeapTypeDagger.ID)
+                if (firstWeapKeyword.Equals(Skyrim.Keyword.WeapTypeDagger))
                     return "1HDagger";
-                if (id == Skyrim.Keyword.WeapTypeGreatsword.ID)
+                if (firstWeapKeyword.Equals(Skyrim.Keyword.WeapTypeGreatsword))
                     return "2HSword";
-                if (id == Skyrim.Keyword.WeapTypeBattleaxe.ID)
+                if (firstWeapKeyword.Equals(Skyrim.Keyword.WeapTypeBattleaxe))
                     return "2HAxe";
-                if (id == Skyrim.Keyword.WeapTypeWarhammer.ID)
+                if (firstWeapKeyword.Equals(Skyrim.Keyword.WeapTypeWarhammer))
                     return "2HHammer";
-                if (id == Skyrim.Keyword.WeapTypeBow.ID)
+                if (firstWeapKeyword.Equals(Skyrim.Keyword.WeapTypeBow))
                     return "Bow";
             }
             catch (Exception)
@@ -306,7 +301,7 @@ namespace SilentMoonsEnchantmentPatcher
             return EnchantmentWeaponTiers[damageTier];
         }
 
-        private static Weapon MakeEnchantedWeapon(IWeaponGetter weaponGetter, EnchantmentData enchantmentData, SynthesisState<ISkyrimMod, ISkyrimModGetter> state)
+        private static Weapon MakeEnchantedWeapon(IWeaponGetter weaponGetter, EnchantmentData enchantmentData, IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
             var newEDID = enchantmentData.NewEDID(weaponGetter);
             //Console.WriteLine($"Creating new enchanted weapon {newEDID}");
@@ -381,7 +376,7 @@ namespace SilentMoonsEnchantmentPatcher
                 .Min();
         }
         
-        private static void RunPatch(SynthesisState<ISkyrimMod, ISkyrimModGetter> state)
+        private static void RunPatch(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
             var lunarEnchantmentData = JsonUtils.FromJson<Dictionary<string, LunarEnchantmentData>>(Path.Combine(state.ExtraSettingsDataPath, "LunarEnchData.json"));
             if (lunarEnchantmentData.Count == 0)
@@ -452,7 +447,7 @@ namespace SilentMoonsEnchantmentPatcher
                     if (!(createdObject is IWeaponGetter weaponRecord)) return null;
                     if (!weaponRecord.ObjectEffect.IsNull) return null;
                     if (weaponRecord.Keywords == null) return null;
-                    if (!weaponRecord.Keywords.Any(x => WeaponKeywords.Contains(x.FormKey))) return null;
+                    if (!weaponRecord.Keywords.Any(x => WeaponKeywords.Contains(x))) return null;
 
                     return weaponRecord;
                 })
