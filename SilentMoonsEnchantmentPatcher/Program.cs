@@ -42,15 +42,6 @@ namespace SilentMoonsEnchantmentPatcher
         private const int DragonboneLevel = 50;
         private static readonly int[] CrossbowLevelData = {1, 1, 12, 24, 42, DragonboneLevel};
         
-        private static readonly ModKey SkyrimModKey = ModKey.FromNameAndExtension("Skyrim.esm");
-        private static readonly ModKey DawnguardModKey = ModKey.FromNameAndExtension("Dawnguard.esm");
-
-        private static readonly ModKey SailorMoonModKey = ModKey.FromNameAndExtension("SailorMoonClub.esp");
-        private static readonly FormKey LunarForgeUnenchantedFormIDListFormKey = new FormKey(SailorMoonModKey, 0x81EA);
-        private static readonly FormKey LunarForgeLunarBasicFormIDListFormKey = new FormKey(SailorMoonModKey, 0x81EB);
-        private static readonly FormKey LunarForgeAwakenedLunarFormIDListFormKey = new FormKey(SailorMoonModKey, 0x81EC);
-        private static readonly FormKey LunarForgeLunarAbsorbFormIDListFormKey = new FormKey(SailorMoonModKey, 0x81ED);
-        
         //was hardcoded in the original
         private static readonly WeaponTierData CrossbowDamage = new WeaponTierData(19, 22, 23, 27, 30);
         
@@ -382,26 +373,22 @@ namespace SilentMoonsEnchantmentPatcher
             if (lunarEnchantmentData.Count == 0)
                 throw new ArgumentException("Enchantment Data List Count is null!");
             
-            if (!state.LoadOrder.ContainsKey(SailorMoonModKey))
+            if (!state.LoadOrder.ContainsKey(SailorMoonClub.ModKey))
                 throw new ArgumentException("Required plugin SailorMoonClub.esp does not exist in load order!");
             
-            if (!state.LoadOrder.TryGetValue(SailorMoonModKey, out IModListing<ISkyrimModGetter>? sailorMoonMod))
+            if (!state.LoadOrder.TryGetValue(SailorMoonClub.ModKey, out IModListing<ISkyrimModGetter>? sailorMoonMod))
                 throw new ArgumentException("Unable to get SailorMoonClub.esp plugin");
 
-            if (!state.LoadOrder.TryGetValue(SkyrimModKey, out IModListing<ISkyrimModGetter>? skyrimListing))
+            if (!state.LoadOrder.TryGetValue(Constants.Skyrim, out IModListing<ISkyrimModGetter>? skyrimListing))
                 throw new ArgumentException("Skyrim.esm was not found!");
             
-            if (!state.LoadOrder.TryGetValue(DawnguardModKey, out IModListing<ISkyrimModGetter>? dawnguardListing))
+            if (!state.LoadOrder.TryGetValue(Constants.Dawnguard, out IModListing<ISkyrimModGetter>? dawnguardListing))
                 throw new ArgumentException("Dawnguard.esm was not found!");
-            
-            if (!state.LinkCache.TryResolve<IFormListGetter>(LunarForgeUnenchantedFormIDListFormKey, out var unenchantedFormIDListGetter))
-                throw new Exception($"Unable to find {LunarForgeUnenchantedFormIDListFormKey}");
-            if (!state.LinkCache.TryResolve<IFormListGetter>(LunarForgeAwakenedLunarFormIDListFormKey, out var awakenedFormIDListGetter))
-                throw new Exception($"Unable to find {LunarForgeAwakenedLunarFormIDListFormKey}");
-            if (!state.LinkCache.TryResolve<IFormListGetter>(LunarForgeLunarAbsorbFormIDListFormKey, out var lunarAbsorbFormIDListGetter))
-                throw new Exception($"Unable to find {LunarForgeLunarAbsorbFormIDListFormKey}");
-            if (!state.LinkCache.TryResolve<IFormListGetter>(LunarForgeLunarBasicFormIDListFormKey, out var lunarBasicFormIDListGetter))
-                throw new Exception($"Unable to find {LunarForgeLunarBasicFormIDListFormKey}");
+
+            var unenchantedFormIDListGetter = SailorMoonClub.FormList.LunarForge_UnenchantedFLST.Resolve(state.LinkCache);
+            var awakenedFormIDListGetter = SailorMoonClub.FormList.LunarForge_AwakenedLunarFLST.Resolve(state.LinkCache);
+            var lunarAbsorbFormIDListGetter = SailorMoonClub.FormList.LunarForge_LunarAbsorbFLST.Resolve(state.LinkCache);
+            var lunarBasicFormIDListGetter = SailorMoonClub.FormList.LunarForge_LunarBasicFLST.Resolve(state.LinkCache);
 
             IReadOnlyDictionary<string, List<EnchantmentData>> enchantments = GetEnchantmentsData(sailorMoonMod.Mod!, lunarEnchantmentData);
             IReadOnlyDictionary<string, WeaponTierData> weaponTiers = GetWeaponTierDataDictionary(skyrimListing.Mod!, dawnguardListing.Mod!);
