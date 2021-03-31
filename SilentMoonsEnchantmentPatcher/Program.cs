@@ -429,7 +429,7 @@ namespace SilentMoonsEnchantmentPatcher
                     if (!constructibleObject.WorkbenchKeyword.TryResolve(state.LinkCache, out var workbenchKeyword))
                         return null;
 
-                    if (!workbenchKeyword.FormKey.Equals(Skyrim.Keyword.CraftingSmithingForge)) return null;
+                    if (!workbenchKeyword.Equals(Skyrim.Keyword.CraftingSmithingForge)) return null;
 
                     if (!(createdObject is IWeaponGetter weaponRecord)) return null;
                     if (!weaponRecord.ObjectEffect.IsNull) return null;
