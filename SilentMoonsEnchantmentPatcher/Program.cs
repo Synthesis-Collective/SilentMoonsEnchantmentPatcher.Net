@@ -25,6 +25,10 @@ using Mutagen.Bethesda.Synthesis;
 using Mutagen.Bethesda.FormKeys.SkyrimSE;
 using Noggog;
 using System.Threading.Tasks;
+using Mutagen.Bethesda.Plugins;
+using Mutagen.Bethesda.Plugins.Cache;
+using Mutagen.Bethesda.Plugins.Order;
+using Mutagen.Bethesda.Plugins.Records;
 
 namespace SilentMoonsEnchantmentPatcher
 {
@@ -390,8 +394,8 @@ namespace SilentMoonsEnchantmentPatcher
             var lunarAbsorbFormIDListGetter = SailorMoonClub.FormList.LunarForge_LunarAbsorbFLST.Resolve(state.LinkCache);
             var lunarBasicFormIDListGetter = SailorMoonClub.FormList.LunarForge_LunarBasicFLST.Resolve(state.LinkCache);
 
-            IReadOnlyDictionary<string, List<EnchantmentData>> enchantments = GetEnchantmentsData(sailorMoonMod.Mod!, lunarEnchantmentData);
-            IReadOnlyDictionary<string, WeaponTierData> weaponTiers = GetWeaponTierDataDictionary(skyrimListing.Mod!, dawnguardListing.Mod!);
+            IReadOnlyDictionary<string, List<EnchantmentData>> enchantments = GetEnchantmentsData(sailorMoonMod!.Mod!, lunarEnchantmentData);
+            IReadOnlyDictionary<string, WeaponTierData> weaponTiers = GetWeaponTierDataDictionary(skyrimListing!.Mod!, dawnguardListing!.Mod!);
             IReadOnlyDictionary<string, List<WeaponDamageLevel>> damageLevelData = GetDamageLevelData(state.LinkCache, weaponTiers);
             
             var noEnchantmentFormList = state.PatchMod.FormLists.GetOrAddAsOverride(unenchantedFormIDListGetter.DeepCopy());
