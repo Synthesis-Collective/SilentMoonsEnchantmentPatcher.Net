@@ -27,7 +27,6 @@ using Noggog;
 using System.Threading.Tasks;
 using Mutagen.Bethesda.Plugins;
 using Mutagen.Bethesda.Plugins.Cache;
-using Mutagen.Bethesda.Plugins.Order;
 using Mutagen.Bethesda.Plugins.Records;
 
 namespace SilentMoonsEnchantmentPatcher
@@ -379,23 +378,20 @@ namespace SilentMoonsEnchantmentPatcher
             
             if (!state.LoadOrder.ContainsKey(SailorMoonClub.ModKey))
                 throw new ArgumentException("Required plugin SailorMoonClub.esp does not exist in load order!");
-            
-            if (!state.LoadOrder.TryGetValue(SailorMoonClub.ModKey, out IModListing<ISkyrimModGetter>? sailorMoonMod))
-                throw new ArgumentException("Unable to get SailorMoonClub.esp plugin");
 
-            if (!state.LoadOrder.TryGetValue(Constants.Skyrim, out IModListing<ISkyrimModGetter>? skyrimListing))
-                throw new ArgumentException("Skyrim.esm was not found!");
-            
-            if (!state.LoadOrder.TryGetValue(Constants.Dawnguard, out IModListing<ISkyrimModGetter>? dawnguardListing))
-                throw new ArgumentException("Dawnguard.esm was not found!");
+            var sailorMoonMod = state.LoadOrder.GetIfEnabledAndExists(SailorMoonClub.ModKey);
+
+            var skyrimListing = state.LoadOrder.GetIfEnabledAndExists(Constants.Skyrim);
+
+            var dawnguardListing = state.LoadOrder.GetIfEnabledAndExists(Constants.Dawnguard);
 
             var unenchantedFormIDListGetter = SailorMoonClub.FormList.LunarForge_UnenchantedFLST.Resolve(state.LinkCache);
             var awakenedFormIDListGetter = SailorMoonClub.FormList.LunarForge_AwakenedLunarFLST.Resolve(state.LinkCache);
             var lunarAbsorbFormIDListGetter = SailorMoonClub.FormList.LunarForge_LunarAbsorbFLST.Resolve(state.LinkCache);
             var lunarBasicFormIDListGetter = SailorMoonClub.FormList.LunarForge_LunarBasicFLST.Resolve(state.LinkCache);
 
-            IReadOnlyDictionary<string, List<EnchantmentData>> enchantments = GetEnchantmentsData(sailorMoonMod!.Mod!, lunarEnchantmentData);
-            IReadOnlyDictionary<string, WeaponTierData> weaponTiers = GetWeaponTierDataDictionary(skyrimListing!.Mod!, dawnguardListing!.Mod!);
+            IReadOnlyDictionary<string, List<EnchantmentData>> enchantments = GetEnchantmentsData(sailorMoonMod, lunarEnchantmentData);
+            IReadOnlyDictionary<string, WeaponTierData> weaponTiers = GetWeaponTierDataDictionary(skyrimListing, dawnguardListing);
             IReadOnlyDictionary<string, List<WeaponDamageLevel>> damageLevelData = GetDamageLevelData(state.LinkCache, weaponTiers);
             
             var noEnchantmentFormList = state.PatchMod.FormLists.GetOrAddAsOverride(unenchantedFormIDListGetter.DeepCopy());
@@ -508,7 +504,7 @@ namespace SilentMoonsEnchantmentPatcher
 
             //finalizing
             Console.WriteLine("Finished patching, finalizing");
-            Dictionary<string, LeveledItem> baseLItems = sailorMoonMod!.Mod!.LeveledItems
+            Dictionary<string, LeveledItem> baseLItems = sailorMoonMod.LeveledItems
                 .Select(x =>
                 {
                     if (x.EditorID == null) return ("", x);
