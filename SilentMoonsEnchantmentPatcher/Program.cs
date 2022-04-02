@@ -41,6 +41,8 @@ namespace SilentMoonsEnchantmentPatcher
                 .Run(args);
         }
 
+        private static readonly SkyrimMajorRecord.TranslationMask NoEdidMask = new(defaultOn: true) { EditorID = false };
+
         //TODO: settings
         private const int DragonboneLevel = 50;
         private static readonly int[] CrossbowLevelData = {1, 1, 12, 24, 42, DragonboneLevel};
@@ -300,10 +302,9 @@ namespace SilentMoonsEnchantmentPatcher
             var newEDID = enchantmentData.NewEDID(weaponGetter);
             //Console.WriteLine($"Creating new enchanted weapon {newEDID}");
             
-            var newWeapon = state.PatchMod.Weapons.AddNew();
-            newWeapon.DeepCopyIn(weaponGetter);
-
-            newWeapon.EditorID = newEDID;
+            var newWeapon = state.PatchMod.Weapons.AddNew(newEDID);
+            newWeapon.DeepCopyIn(weaponGetter, NoEdidMask);
+            
             newWeapon.Name = enchantmentData.NewName(weaponGetter);
             newWeapon.ObjectEffect = new FormLinkNullable<IEffectRecordGetter>(enchantmentData.ObjectEffectGetter.FormKey);
             newWeapon.EnchantmentAmount = enchantmentData.Pts;
