@@ -302,7 +302,7 @@ namespace SilentMoonsEnchantmentPatcher
             
             var newWeapon = state.PatchMod.Weapons.AddNew();
             newWeapon.DeepCopyIn(weaponGetter);
-            
+
             newWeapon.EditorID = newEDID;
             newWeapon.Name = enchantmentData.NewName(weaponGetter);
             newWeapon.ObjectEffect = new FormLinkNullable<IEffectRecordGetter>(enchantmentData.ObjectEffectGetter.FormKey);
@@ -440,6 +440,8 @@ namespace SilentMoonsEnchantmentPatcher
                 })
                 .Where(x => x != null)
                 .Select(x => x!)
+                .GroupBy(x => x.AsLink())
+                .Select(grouping => grouping.First())
                 .ToList();
             
             //patching
