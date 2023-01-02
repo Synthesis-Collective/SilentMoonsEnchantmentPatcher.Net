@@ -372,7 +372,7 @@ namespace SilentMoonsEnchantmentPatcher
         
         private static void RunPatch(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
-            var lunarEnchantmentData = JsonUtils.FromJson<Dictionary<string, LunarEnchantmentData>>(Path.Combine(state.ExtraSettingsDataPath, "LunarEnchData.json"));
+            var lunarEnchantmentData = JsonUtils.FromJson<Dictionary<string, LunarEnchantmentData>>(state.RetrieveConfigFile("LunarEnchData.json"));
             if (lunarEnchantmentData.Count == 0)
                 throw new ArgumentException("Enchantment Data List Count is null!");
             
